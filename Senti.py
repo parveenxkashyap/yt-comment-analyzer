@@ -5,7 +5,6 @@ from typing import Dict
 import nltk
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
-# Download once (quiet) so first run doesn't break
 nltk.download("vader_lexicon", quiet=True)
 
 
