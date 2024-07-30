@@ -31,13 +31,12 @@ def save_video_comments_to_csv(youtube, video_id: str, out_dir: str = ".") -> Op
     comments: list[list[str]] = []
 
     try:
-        req = youtube.commentThreads().list(
+        resp = youtube.commentThreads().list(
             part="snippet",
             videoId=video_id,
             textFormat="plainText",
             maxResults=100,
-        )
-        resp = req.execute()
+        ).execute()
 
         while resp:
             for item in resp.get("items", []):
@@ -73,3 +72,40 @@ def save_video_comments_to_csv(youtube, video_id: str, out_dir: str = ".") -> Op
         writer.writerows(comments)
 
     return filepath
+
+
+def get_video_stats(youtube, video_id: str) -> dict:
+    try:
+        resp = youtube.videos().list(part="statistics", id=video_id).execute()
+        items = resp.get("items", [])
+        return items[0].get("statistics", {}) if items else {}
+    except HttpError:
+        return {}
+
+
+def get_channel_info(youtube, channel_id: str) -> Optional[dict]:
+    try:
+        resp = youtube.channels().list(
+            part="snippet,statistics,brandingSettings",
+            id=channel_id,
+        ).execute()
+
+        items = resp.get("items", [])
+        if not items:
+            return None
+
+        channel = items[0]
+        snippet = channel.get("snippet", {})
+        stats = channel.get("statistics", {})
+        thumbs = snippet.get("thumbnails", {})
+
+        return {
+            "channel_title": snippet.get("title", ""),
+            "channel_logo_url": (thumbs.get("high") or thumbs.get("default") or {}).get("url", ""),
+            "channel_created_date": snippet.get("publishedAt", ""),
+            "subscriber_count": stats.get("subscriberCount", ""),
+            "video_count": stats.get("videoCount", ""),
+            "channel_description": snippet.get("description", ""),
+        }
+    except HttpError:
+        return None
